@@ -1,9 +1,14 @@
 clear; close all; clc;
 
+
+
+
+
+
 %% Problem Setup
 
 % physical parameters
-H = 1; %length of x grid, y grid 
+H = 1; %length of x grid, y grid
 U0 = 1; %physical characteristic velocity (lid)
 Re = 5000; %Reynolds number
 
@@ -29,6 +34,8 @@ alpha = cs^2*(tau-0.5); %lattice kinematic viscosity
 N = Re*alpha/uo; %lattice Re matching physical Re
 nx = 2*floor(N/2); %number of nodes in x-direction
 ny = nx; %number of nodes in y-direction
+
+
 
 % physical parameters
 x = linspace(0,H,nx); %x nodes
@@ -56,6 +63,7 @@ for i = 2:nx-1
     u(i,ny) = uo;
     v(i,ny) = 0.0;
 end
+
 
 %% Solving Governing Equations
 
@@ -162,7 +170,7 @@ while error > tolerance
             v(i,j) = vsum/rho(i,j);
         end
     end
-    
+
 % error monitoring
     error = norm(u-ut)/(nx*ny)+norm(v-vt)/(nx*ny);
     ut = u;
