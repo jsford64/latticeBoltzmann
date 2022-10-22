@@ -10,7 +10,7 @@ import plotly.figure_factory as ff
 # physical parameters
 H = 1 #length of x grid, y grid
 U0 = 1 #physical characteristic velocity (lid)
-Re = 5000 #Reynolds number
+Re = 100#5000 #Reynolds number
 
 # lattice parameters
 dx = 1 #x step size
@@ -32,10 +32,9 @@ ur = U0/uo #reference velocity
 omega = 1/tau               #collision frequency
 alpha = cs**2*(tau-0.5)     #lattice kinematic viscosity
 N = Re*alpha/uo             #lattice Re matching physical Re
-nx = int(2*np.floor(N/2))   #number of nodes in x-direction
+nx = 20 #int(2*np.floor(N/2))   #number of nodes in x-direction
 ny = nx                     #number of nodes in y-direction
 
-print(f'Re:{Re:4.1f} nx:{nx}')
 np.seterr(over='raise')
 # physical parameters
 x = np.linspace(0,H,nx) #x nodes
@@ -59,16 +58,20 @@ vt = np.copy(v)
 error = 1.0
 iterations = 0
 
-for i in range(1,nx):
+for i in range(1,nx-1):
     u[i,ny-1] = uo
     v[i,ny-1] = 0.0   # redundant
 
 # u[:,-1] = uo
 
 ## Solving Governing Equations
-print(type(omega),feq.dtype,f.dtype)
-while error > tolerance:
-    print(f'Iteration: {iterations}')
+def chkf(name,f):
+    for j in range(ny):
+        for i in range(nx):
+            for k in range(9):
+                print(f'{name} [{k+1},{i+1},{j+1}] {f[k,i,j]:.6f}')
+
+while error > tolerance: # and iterations<1000:
     # collision
     for i in range(nx):
         for j in range(ny):
@@ -78,30 +81,30 @@ while error > tolerance:
                 feq[k,i,j] = rho[i,j]*w[k]*(1.0+3.0*t2+4.50*t2*t2-1.50*t1)
                 f[k,i,j] = omega*feq[k,i,j]+(1.0-omega)*f[k,i,j]
 
-
+    #chkf('coll',f)
 
 
     # streaming
     for j in range(ny):
-        for i in range(nx-1,1,-1): # right to left
+        for i in range(nx-1,0,-1): # right to left
             f[1,i,j] = f[1,i-1,j]
 
         for i in range(nx-1): # left to right
             f[3,i,j] = f[3,i+1,j]
 
+    #chkf('rtl',f)
 
-
-    for j in range(ny-1,1,-1): # top to bottom
+    for j in range(ny-1,0,-1): # top to bottom
         for i in range(nx):
             f[2,i,j] = f[2,i,j-1]
 
-        for i in range(nx-1,1,-1):
+        for i in range(nx-1,0,-1):
             f[5,i,j] = f[5,i-1,j-1]
 
         for i in range(nx-1):
             f[6,i,j] = f[6,i+1,j-1]
 
-
+    #chkf('ttb',f)
 
     for j in range(ny-1): # bottom to top
         for i in range(nx):
@@ -110,8 +113,11 @@ while error > tolerance:
         for i in range(nx-1):
             f[7,i,j] = f[7,i+1,j+1]
 
-        for i in range(nx-1,1,-1):
+        for i in range(nx-1,0,-1):
             f[8,i,j] = f[8,i-1,j+1]
+
+    #chkf('btt',f)
+
 
 
 
@@ -127,6 +133,8 @@ while error > tolerance:
         f[7,nx-1,j] = f[5,nx-1,j]
         f[6,nx-1,j] = f[8,nx-1,j]
 
+    #chkf('ew',f)
+
 
     # bounce back on south boundary
     for i in range(nx):
@@ -134,13 +142,18 @@ while error > tolerance:
         f[5,i,0] = f[7,i,0]
         f[6,i,0] = f[8,i,0]
 
+    #chkf('s',f)
 
     # moving lid, north boundary
-    for i in range(1,nx):
+    for i in range(1,nx-1):
         rhon = f[0,i,ny-1]+f[1,i,ny-1]+f[3,i,ny-1]+2.0*(f[2,i,ny-1]+f[6,i,ny-1]+f[5,i,ny-1])
+        #print(f'rhon = {rhon:.4f}')
         f[4,i,ny-1] = f[2,i,ny-1]
         f[8,i,ny-1] = f[6,i,ny-1]+rhon*uo/6.0
         f[7,i,ny-1] = f[5,i,ny-1]-rhon*uo/6.0
+
+    #chkf('n',f)
+
 
     # rho, u, v
     for j in range(ny):
@@ -166,22 +179,28 @@ while error > tolerance:
             v[i,j] = vsum/rho[i,j]
 
 
+    for j in range(nx):
+        for i in range(nx):
+            print(f'u[{i+1},{j+1}] {u[i,j]:.6f}')
+
+    for j in range(nx):
+        for i in range(nx):
+            print(f'v[{i+1},{j+1}] {v[i,j]:.6f}')
+
     # error monitoring
     error = np.linalg.norm(u-ut)/(nx*ny)+np.linalg.norm(v-vt)/(nx*ny)
     ut = np.copy(u)
     vt = np.copy(v)
     iterations = iterations+1
-
+    print(f'iterations = {iterations}')
 
 
 ## Results
-print(f'u:\n{u}')
-print(f'v:\n{v}')
 
 # convert to physical parameters
-u = ur*u
-v = ur*v
-p = cs**2*rho
+# u = ur*u
+# v = ur*v
+# p = cs**2*rho
 
 # Correct indexing
 # uu = flipud(rot90(u))
@@ -189,8 +208,8 @@ p = cs**2*rho
 # pp = flipud(rot90(p))
 
 ## Plotting
-ff.create_streamline(x,y,u,v)
-plt.show()
+# ff.create_streamline(x,y,u,v)
+# plt.show()
     # set(streams,'LineWidth',1,'color',[0 0 0])
     # daspect([1 1 1])
     # xlim([0 nx])

@@ -10,7 +10,7 @@ clear; close all; clc;
 % physical parameters
 H = 1; %length of x grid, y grid
 U0 = 1; %physical characteristic velocity (lid)
-Re = 5000; %Reynolds number
+Re = 100; %Reynolds number
 
 % lattice parameters
 dx = 1; %x step size
@@ -32,7 +32,7 @@ ur = U0/uo; %reference velocity
 omega = 1/tau; %collision frequency
 alpha = cs^2*(tau-0.5); %lattice kinematic viscosity
 N = Re*alpha/uo; %lattice Re matching physical Re
-nx = 2*floor(N/2); %number of nodes in x-direction
+nx = 20; %number of nodes in x-direction
 ny = nx; %number of nodes in y-direction
 
 
@@ -64,10 +64,21 @@ for i = 2:nx-1
     v(i,ny) = 0.0;
 end
 
+function _ = chkf(name,n,f)
+    for j = 1:n
+        for i = 1:n
+            for k = 1:9
+                printf("%s [%i,%i,%i] %f\n",name,k,i,j,f(k,i,j))
+            end
+        end
+    end
+end
+
+% printf(['[%.3f ' repmat('%.3f ', 1, size(u, 2)-1) ']\n'], u);
 
 %% Solving Governing Equations
 
-while error > tolerance
+while error > tolerance %& iterations<1000
 
 % collision
     for i = 1:nx
@@ -80,6 +91,7 @@ while error > tolerance
             end
         end
     end
+    %chkf("coll",nx,f)
 
 % streaming
     for j = 1:ny
@@ -90,6 +102,8 @@ while error > tolerance
             f(4,i,j) = f(4,i+1,j);
         end
     end
+
+    %chkf("rtl",nx,f)
 
     for j = ny:-1:2 % top to bottom
         for i = 1:nx
@@ -103,6 +117,8 @@ while error > tolerance
         end
     end
 
+    %chkf("ttb",nx,f)
+
     for j = 1:ny-1 % bottom to top
         for i = 1:nx
             f(5,i,j) = f(5,i,j+1);
@@ -114,6 +130,7 @@ while error > tolerance
             f(9,i,j) = f(9,i-1,j+1);
         end
     end
+    %chkf("btt",nx,f)
 
 % boundary conditions
     for j = 1:ny
@@ -127,6 +144,7 @@ while error > tolerance
         f(8,nx,j) = f(6,nx,j);
         f(7,nx,j) = f(9,nx,j);
     end
+    %chkf("ew",nx,f)
 
     % bounce back on south boundary
     for i = 1:nx
@@ -134,6 +152,7 @@ while error > tolerance
         f(6,i,1) = f(8,i,1);
         f(7,i,1) = f(9,i,1);
     end
+    %chkf("s",nx,f)
 
     % moving lid, north boundary
     for i = 2:nx-1
@@ -142,8 +161,9 @@ while error > tolerance
         f(9,i,ny) = f(7,i,ny)+rhon*uo/6.0;
         f(8,i,ny) = f(6,i,ny)-rhon*uo/6.0;
     end
+    %chkf("n",nx,f)
 
-% rho, u, v
+    % rho, u, v
     for j = 1:ny
         for i = 1:nx
             ssum = 0.0;
@@ -171,11 +191,23 @@ while error > tolerance
         end
     end
 
-% error monitoring
+    for j = 1:nx
+        for i = 1:nx
+            printf("u[%i,%i] %f\n",i,j,u(i,j))
+        end
+    end
+
+    for j = 1:nx
+        for i = 1:nx
+            printf("v[%i,%i] %f\n",i,j,v(i,j))
+        end
+    end
+
+    % error monitoring
     error = norm(u-ut)/(nx*ny)+norm(v-vt)/(nx*ny);
     ut = u;
     vt = v;
-    iterations = iterations+1;
+    iterations = iterations+1
 
 end
 
@@ -193,13 +225,13 @@ pp = flipud(rot90(p));
 
 %% Plotting
 
-figure;
-    streams = streamslice(x,y,uu,vv,2);
-    set(streams,'LineWidth',1,'color',[0 0 0])
-    daspect([1 1 1])
-    xlim([0 nx])
-    xlabel('x','fontweight','bold')
-    ylim([0 ny])
-    ylabel('y','fontweight','bold')
-    axis tight
-    box on
+% figure;
+%     streams = streamslice(x,y,uu,vv,2);
+%     set(streams,'LineWidth',1,'color',[0 0 0])
+%     daspect([1 1 1])
+%     xlim([0 nx])
+%     xlabel('x','fontweight','bold')
+%     ylim([0 ny])
+%     ylabel('y','fontweight','bold')
+%     axis tight
+%     box on
