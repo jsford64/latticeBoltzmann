@@ -32,7 +32,7 @@ ur = U0/uo; %reference velocity
 omega = 1/tau; %collision frequency
 alpha = cs^2*(tau-0.5); %lattice kinematic viscosity
 N = Re*alpha/uo; %lattice Re matching physical Re
-nx = 20; %number of nodes in x-direction
+nx = 2*floor(N/2); %number of nodes in x-direction
 ny = nx; %number of nodes in y-direction
 
 

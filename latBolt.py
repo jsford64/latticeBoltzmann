@@ -19,7 +19,7 @@ dt = 1 #t step size
 cs = 1/np.sqrt(3)   #lattice speed of sound
 rhoo = 5.00         #lattice density initial
 Ma = 0.1           #lattice mach number
-tau = 0.5355        #lattice relaxation time
+tau = 0.55        #lattice relaxation time
 
 tolerance = 1e-8    # solver final residual
 
@@ -32,10 +32,10 @@ ur = U0/uo #reference velocity
 omega = 1/tau               #collision frequency
 alpha = cs**2*(tau-0.5)     #lattice kinematic viscosity
 N = Re*alpha/uo             #lattice Re matching physical Re
-nx = 20 #int(2*np.floor(N/2))   #number of nodes in x-direction
+nx = int(2*np.floor(N/2))   #number of nodes in x-direction
 ny = nx                     #number of nodes in y-direction
-
-np.seterr(over='raise')
+print(nx)
+np.seterr(over='raise') # raise exception on numerical overrun
 # physical parameters
 x = np.linspace(0,H,nx) #x nodes
 y = np.linspace(0,H,ny) #y nodes
@@ -58,26 +58,22 @@ vt = np.copy(v)
 error = 1.0
 iterations = 0
 
-for i in range(1,nx-1):
-    u[i,ny-1] = uo
-    v[i,ny-1] = 0.0   # redundant
+# for i in range(1,nx-1):
+#     u[i,ny-1] = uo
+#     v[i,ny-1] = 0.0   # redundant
 
-# u[:,-1] = uo
+u[:,-1] = uo
 
 ## Solving Governing Equations
-def chkf(name,f):
-    for j in range(ny):
-        for i in range(nx):
-            for k in range(9):
-                print(f'{name} [{k+1},{i+1},{j+1}] {f[k,i,j]:.6f}')
 
 while error > tolerance: # and iterations<1000:
     # collision
+    t1 = u**2 + v**2
+    t2 = u[:]*cx + v[:]*cy
+
     for i in range(nx):
         for j in range(ny):
-            t1 = u[i,j]*u[i,j]+v[i,j]*v[i,j]
             for k in range(9):
-                t2 = u[i,j]*cx[k]+v[i,j]*cy[k]
                 feq[k,i,j] = rho[i,j]*w[k]*(1.0+3.0*t2+4.50*t2*t2-1.50*t1)
                 f[k,i,j] = omega*feq[k,i,j]+(1.0-omega)*f[k,i,j]
 
@@ -179,36 +175,37 @@ while error > tolerance: # and iterations<1000:
             v[i,j] = vsum/rho[i,j]
 
 
-    for j in range(nx):
-        for i in range(nx):
-            print(f'u[{i+1},{j+1}] {u[i,j]:.6f}')
-
-    for j in range(nx):
-        for i in range(nx):
-            print(f'v[{i+1},{j+1}] {v[i,j]:.6f}')
+    # for j in range(nx):
+    #     for i in range(nx):
+    #         print(f'u[{i+1},{j+1}] {u[i,j]:.6f}')
+    #
+    # for j in range(nx):
+    #     for i in range(nx):
+    #         print(f'v[{i+1},{j+1}] {v[i,j]:.6f}')
 
     # error monitoring
     error = np.linalg.norm(u-ut)/(nx*ny)+np.linalg.norm(v-vt)/(nx*ny)
     ut = np.copy(u)
     vt = np.copy(v)
     iterations = iterations+1
-    print(f'iterations = {iterations}')
+    if iterations % 100 == 0:
+        print(f'iterations = {iterations}')
 
 
 ## Results
 
 # convert to physical parameters
-# u = ur*u
-# v = ur*v
+u = ur*u+1e-6
+v = ur*v+1e-6
 # p = cs**2*rho
 
 # Correct indexing
-# uu = flipud(rot90(u))
-# vv = flipud(rot90(v))
+uu = np.flipud(np.rot90(u))
+vv = np.flipud(np.rot90(v))
 # pp = flipud(rot90(p))
 
 ## Plotting
-# ff.create_streamline(x,y,u,v)
+ff.create_streamline(x,y,uu,vv,arrow_scale=.01,density=2).show()
 # plt.show()
     # set(streams,'LineWidth',1,'color',[0 0 0])
     # daspect([1 1 1])
