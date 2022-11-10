@@ -64,34 +64,49 @@ for i = 2:nx-1
     v(i,ny) = 0.0;
 end
 
-function _ = chkf(name,n,f)
+function _ = chk2(n,f)
     for j = 1:n
         for i = 1:n
-            for k = 1:9
-                printf("%s [%i,%i,%i] %f\n",name,k,i,j,f(k,i,j))
-            end
+            printf("%0.9f\n",f(i,j))
         end
     end
 end
 
-% printf(['[%.3f ' repmat('%.3f ', 1, size(u, 2)-1) ']\n'], u);
+function _ = chk3(n,f)
+    for k = 1:9
+        for j = 1:n
+            for i = 1:n
+                printf("%0.9f\n",f(k,i,j))
+            end
+        end
+    end
+end
+t2 = zeros(9,nx,ny);
 
 %% Solving Governing Equations
+
+% chk2(nx,u);
+% chk2(nx,v);
+
 
 while error > tolerance %& iterations<1000
 
 % collision
-    for i = 1:nx
-        for j = 1:ny
+    for j = 1:ny
+        for i = 1:nx
             t1 = u(i,j)*u(i,j)+v(i,j)*v(i,j);
+            %printf("%0.9f\n",t1);
             for k = 1:9
-                t2 = u(i,j)*cx(k)+v(i,j)*cy(k);
-                feq(k,i,j) = rho(i,j)*w(k)*(1.0+3.0*t2+4.50*t2*t2-1.50*t1);
+                t2(k,i,j) = u(i,j)*cx(k)+v(i,j)*cy(k);
+                feq(k,i,j) = rho(i,j)*w(k)*(1.0+3.0*t2(k,i,j)+4.50*t2(k,i,j)*t2(k,i,j)-1.50*t1);
                 f(k,i,j) = omega*feq(k,i,j)+(1.0-omega)*f(k,i,j);
             end
         end
     end
-    %chkf("coll",nx,f)
+
+    % chk3(nx,t2);
+    % chk3(nx,feq);
+    % chk3(nx,f);
 
 % streaming
     for j = 1:ny
@@ -103,7 +118,7 @@ while error > tolerance %& iterations<1000
         end
     end
 
-    %chkf("rtl",nx,f)
+    %chk3(nx,f);
 
     for j = ny:-1:2 % top to bottom
         for i = 1:nx
@@ -117,7 +132,7 @@ while error > tolerance %& iterations<1000
         end
     end
 
-    %chkf("ttb",nx,f)
+    %chk3(nx,f);
 
     for j = 1:ny-1 % bottom to top
         for i = 1:nx
@@ -130,7 +145,8 @@ while error > tolerance %& iterations<1000
             f(9,i,j) = f(9,i-1,j+1);
         end
     end
-    %chkf("btt",nx,f)
+
+    %chk3(nx,f);
 
 % boundary conditions
     for j = 1:ny
@@ -144,7 +160,8 @@ while error > tolerance %& iterations<1000
         f(8,nx,j) = f(6,nx,j);
         f(7,nx,j) = f(9,nx,j);
     end
-    %chkf("ew",nx,f)
+
+    % chk3(nx,f);
 
     % bounce back on south boundary
     for i = 1:nx
@@ -152,7 +169,8 @@ while error > tolerance %& iterations<1000
         f(6,i,1) = f(8,i,1);
         f(7,i,1) = f(9,i,1);
     end
-    %chkf("s",nx,f)
+
+    %chk3(nx,f);
 
     % moving lid, north boundary
     for i = 2:nx-1
@@ -161,7 +179,8 @@ while error > tolerance %& iterations<1000
         f(9,i,ny) = f(7,i,ny)+rhon*uo/6.0;
         f(8,i,ny) = f(6,i,ny)-rhon*uo/6.0;
     end
-    %chkf("n",nx,f)
+
+    %chk3(nx,f);
 
     % rho, u, v
     for j = 1:ny
@@ -174,9 +193,13 @@ while error > tolerance %& iterations<1000
         end
     end
 
+    %chk2(nx,rho);
+
     for i = 1:nx
         rho(i,ny) = f(1,i,ny)+f(2,i,ny)+f(4,i,ny)+2.0*(f(3,i,ny)+f(7,i,ny)+f(6,i,ny));
     end
+
+    %chk2(nx,rho);
 
     for i = 2:nx
         for j = 2:ny-1
@@ -191,23 +214,14 @@ while error > tolerance %& iterations<1000
         end
     end
 
-    for j = 1:nx
-        for i = 1:nx
-            printf("u[%i,%i] %f\n",i,j,u(i,j))
-        end
-    end
-
-    for j = 1:nx
-        for i = 1:nx
-            printf("v[%i,%i] %f\n",i,j,v(i,j))
-        end
-    end
+    chk2(nx,u);
+    chk2(nx,v);
 
     % error monitoring
     error = norm(u-ut)/(nx*ny)+norm(v-vt)/(nx*ny);
     ut = u;
     vt = v;
-    iterations = iterations+1
+    iterations = iterations+1;
 
 end
 
